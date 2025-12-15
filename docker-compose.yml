@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  # 1. Servicio de Base de Datos (PostgreSQL)
+  db:
+    image: postgres:15
+    container_name: ecommerce_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ecommerce_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # CAMBIO AQUÍ: Apuntamos a la carpeta correcta
+      - ./data/sql/ddl/01_schema_ecommerce.sql:/docker-entrypoint-initdb.d/init.sql
+
+  # 2. Servicio de Aplicación (Tus Scripts Python)
+  app-poblado:
+    build: .
+    container_name: poblado_app
+    depends_on:
+      - db
+    environment:
+      # Credenciales para conectar al servicio 'db' desde dentro de la red Docker
+      DB_HOST: db
+      DB_NAME: ecommerce_db
+      DB_USER: postgres
+      DB_PASS: postgres
+      # Variable que decide qué script ejecutar (leve, moderado, masivo)
+      # Toma el valor de tu entorno local o usa 'leve' por defecto
+      NIVEL_POBLADO: ${NIVEL_POBLADO:-leve}
+
+  # 3. Servicio de Administración (Adminer)
+  adminer:
+    image: adminer
+    container_name: adminer_gui
+    restart: always
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+
+volumes:
+  postgres_data:
